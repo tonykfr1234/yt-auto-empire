@@ -236,6 +236,13 @@ def run_empire_pipeline(
         )
         publish_summary["long_youtube_id"] = long_vid_id
         publish_summary["shorts_youtube_id"] = shorts_vid_id
+    else:
+        publish_summary["long_youtube_id"] = "PENDING_USER_REVIEW"
+        publish_summary["shorts_youtube_id"] = "PENDING_USER_REVIEW"
+        print(
+            f"\n🛡️ [人工 Review 守門員] 影片已通過四維度爆款品質審核 ({qa_and_algo_review['algorithm_readiness_score']}/100 分)，"
+            f"已同步至 Google 雲端硬碟最新檢閱資料夾，等待您 Review 決定是否上傳 YouTube！"
+        )
 
     quota_maximizer.record_campaign_completed(long_count=1, shorts_count=1)
     publish_summary["ultra_quota_status"] = quota_maximizer.state

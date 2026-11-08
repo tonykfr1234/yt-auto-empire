@@ -134,13 +134,14 @@ def pick_next_interleaved_topic(cycle_num: int) -> tuple[str | None, int]:
     return None, 16
 
 
-def run_24_7_hybrid_daemon(interval_minutes: int = 60, auto_upload: bool = True):
+def run_24_7_hybrid_daemon(interval_minutes: int = 60, auto_upload: bool = False):
     load_dotenv()
     print("=" * 76)
     print("🔥 [YT-Auto-Empire 24/7 Daemon] 雲端 + 本地 RTX 3070 雙軌全自動常駐引擎已啟動！")
-    print("   ├─ 雲端修正：已啟用 15 秒無阻塞 Fast-Fail + 多模型輪詢 (3.1-flash-lite / 3.5 / 3.8)")
+    print("   ├─ 雲端修正：已啟用 15 秒無阻塞 Fast-Fail + Google Flow 1080p 最佳模型")
     print("   ├─ 本地加速：已啟用 NVIDIA GeForce RTX 3070 (h264_nvenc) 硬體光速編碼")
-    print("   └─ 目標頻道：tonykfr1234@gmail.com (自動上片 + 月度點數 100% 榨乾)")
+    print("   ├─ 四維度爆款檢視：逐一審核【內容 / 音樂 / 背景人物3D動畫 / 背景文字與字幕】達標 (>=92分)")
+    print("   └─ 人工審閱守門員：完片自動歸檔至 Google 雲端硬碟最新檢閱資料夾，待使用者 Review 核准後才上傳 YouTube！")
     print("=" * 76)
 
     cycle_num = max(1, len(load_published_topics()) + 1)
@@ -183,4 +184,4 @@ def run_24_7_hybrid_daemon(interval_minutes: int = 60, auto_upload: bool = True)
 
 
 if __name__ == "__main__":
-    run_24_7_hybrid_daemon(interval_minutes=45, auto_upload=True)
+    run_24_7_hybrid_daemon(interval_minutes=45, auto_upload=False)

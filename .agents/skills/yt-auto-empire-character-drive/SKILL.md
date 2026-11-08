@@ -1,9 +1,9 @@
 ---
 name: yt-auto-empire-character-drive
-description: Autonomous 24/7 YouTube & Shorts video production pipeline with Google Flow dedicated project (Veo 3.1 Highest Quality 1080p), Google Drive unified vault sync, 24 Pixar/UE5 3D studio character & hologram scenes, 60fps 3D camera parallax & Apple glassmorphism subtitle-synced HUD, audible background music (BGM), female creator voiceover, single-clause intact subtitles throughout the entire video, 9:1 Viral-to-GitHub topic ratio, and 90+ Self-Critic QA gatekeeper.
+description: Autonomous 24/7 YouTube & Shorts video production pipeline with Google Flow dedicated project (Veo 3.1 Highest Quality 1080p), Google Drive unified vault sync, 24 Pixar/UE5 3D studio character & hologram scenes, 60fps 3D camera parallax & Apple glassmorphism subtitle-synced HUD, audible background music (BGM), female creator voiceover, single-clause intact subtitles throughout the entire video, 9:1 Viral-to-GitHub topic ratio, 4-Dimension YouTube Viral Benchmark Inspector (Content, Music, 3D Visuals, Typography/Subtitles >= 92/100), and Mandatory User Review Gatekeeper before YouTube upload.
 ---
 
-# YT-Auto-Empire: Google Flow 1080p + Pixar/UE5 3D Studio Character & Glassmorphism Motion Engine + Google Drive Vault Skill
+# YT-Auto-Empire: Google Flow 1080p + Pixar/UE5 3D Studio Character & Glassmorphism Motion Engine + 4-Dimension Viral Inspector & Google Drive Review Vault Skill
 
 Use this skill whenever building, maintaining, upgrading, or executing the autonomous YouTube 16:9 long-form and 9:16 Shorts generation pipeline (`YT-Auto-Empire` at `C:\Users\tonyk\.gemini\antigravity\scratch\yt-auto-empire`).
 
@@ -21,15 +21,19 @@ Every video MUST be generated/remade via **Google Flow (`https://flow.google.com
 
 ---
 
-## 2. Unified Google Drive Video Vault (`gdrive_sync.py`)
+## 2. Unified Google Drive Video Vault & User Review Folder (`gdrive_sync.py` & `viral_benchmark_inspector.py`)
 
-All completed videos, thumbnails, and subtitle files MUST be automatically synchronized to a single unified folder on Google Drive:
-- **Root Vault Path**: `G:\我的雲端硬碟\YT-Auto-Empire-Videos`
+All completed videos, thumbnails, and subtitle files MUST be automatically synchronized to Google Drive (`G:\我的雲端硬碟\YT-Auto-Empire-Videos`):
 - **Subdirectory Structure**:
   1. `G:\我的雲端硬碟\YT-Auto-Empire-Videos\01_16x9_橫式深度長片` — Named `[16x9長片]_<timestamp>_<topic>.mp4`
   2. `G:\我的雲端硬碟\YT-Auto-Empire-Videos\02_9x16_直式爆款Shorts` — Named `[9x16短片]_<timestamp>_<topic>.mp4`
-  3. `G:\我的雲端硬碟\YT-Auto-Empire-Videos\03_完整專案包_含縮圖與字幕\<campaign_id>_<topic>\` — Contains `final_long_16x9.mp4`, `final_shorts_9x16.mp4`, `thumbnail_16x9.jpg`, `final_long_16x9.srt`, `final_shorts_9x16.srt`, and `02_campaign_summary.json`
-  4. `G:\我的雲端硬碟\YT-Auto-Empire-Videos\00_影片總表清單.md` — Auto-generated Markdown index of all completed campaigns and direct file paths.
+  3. `G:\我的雲端硬碟\YT-Auto-Empire-Videos\03_完整專案包_含縮圖與字幕\<campaign_id>_<topic>\` — Full campaign package
+  4. `G:\我的雲端硬碟\YT-Auto-Empire-Videos\04_最新重製精緻3D動畫版_全集檢閱` — **Dedicated User Review Vault** containing:
+     - `01_16x9_橫式長片_重製版`
+     - `02_9x16_直式Shorts_重製版`
+     - `03_實機畫面抽樣截圖`
+     - `04_對標百萬爆款_高點擊縮圖`
+     - `00_全部修正影片檢閱清單.md`
 
 ---
 
@@ -44,14 +48,18 @@ Every video scene MUST satisfy four strict visual and audio rules:
    - Strictly forbid `-stream_loop -1` or reusing identical visual scenes across different scene IDs (`sid = 1..24`).
 3. **Full-Duration Subtitles Synchronized 1:1 with Apple/Linear Glassmorphism HUD (`全程都有字幕 配合畫面`)**:
    - Both `viral_broll_engine.py` and `auto_editor.py` split narration using the exact same punctuation regex (`r"[。！？；：，、—…]+"`) and calculate each clause's exact cumulative character ratio (`cumChars / totalChars`).
-   - As each subtitle clause appears at the bottom of the screen from `00:00.000` to the end of the video, the translucent **Apple/Linear Glassmorphism Telemetry Card (`backdrop-filter: blur(20px)`)** smoothly animates to display that exact clause's contextual badge, step counter (`SYNC 01 / 03`), and live progress bar while keeping the central 85% of the screen completely open for the 3D character and hologram.
    - Burned-in subtitles execute with `cwd=srt_dir` and relative filename `subtitles='final_long_16x9.srt'` (`FontSize=12` for 16:9, `FontSize=7` for 9:16) so subtitles never fail or overflow screen edges.
 4. **Audible Rhythmic Background Music (`加上背景音樂`)**:
-   - `generate_cyber_bgm_and_sfx()` synthesizes a full-duration stereo Synthwave/Tech rhythm track (bassline pulse + chord progression + 120BPM arpeggio) and mixes it with the female creator voiceover (`zh-TW-HsiaoChenNeural`) using `amix=inputs=2:duration=first:dropout_transition=0:normalize=0` (`[0:a]volume=1.05[va];[1:a]volume=0.28[bg]`).
+   - `generate_cyber_bgm_and_sfx()` synthesizes a full-duration stereo Synthwave/Tech rhythm track and mixes it with the female creator voiceover (`zh-TW-HsiaoChenNeural`) using `amix=inputs=2:duration=first:dropout_transition=0:normalize=0`.
 
 ---
 
-## 4. Standing Editorial Rules
-1. **9:1 Viral-to-GitHub Topic Ratio (`daemon_24_7.py`)**: 9 YouTube viral competitor remakes (`cycle_num % 10 != 0`) to 1 GitHub Trending open-source showcase (`cycle_num % 10 == 0`).
-2. **Unified Stress Testing Chapter**: Never split stress testing (`壓力測試`) into `(上)/(下)`.
-3. **Self-Critic QA Gatekeeper (`self_critic_and_analytics.py`)**: Every video must score **>= 90/100** before archiving to Google Drive and uploading to YouTube.
+## 4. One-by-One 4-Dimension YouTube Viral Benchmark Inspector & Mandatory User Review Gatekeeper (`viral_benchmark_inspector.py`)
+
+Before any video is considered ready, inspect it one by one against top YouTube viral benchmarks (e.g., `AI幫手`, `瑤瑤AI短劇`, `啊岳啪啪走`) across 4 dimensions (25 points each, total 100 points, must score **>= 92/100**):
+1. **內容與痛點鉤子 (`content_score`: 25/25)**: Numerical contrast hook (`99%`, `$200 vs $0`, `40回合`), unified stress-test chapter (never split into `(上)/(下)`), and 100% unique scene narration.
+2. **背景音樂與人聲律動 (`music_score`: 25/25)**: 44.1kHz stereo audio, audible Synthwave BGM (`normalize=0`) + crisp female voiceover (`zh-TW-HsiaoChenNeural`).
+3. **背景人物與精緻 3D 動畫 (`visual_score`: 25/25)**: 1080p resolution, high visual contrast (`STD >= 35.0`), 24 distinct Pixar/UE5 3D female presenter + hologram scenes, 60fps 3D camera parallax.
+4. **背景文字、大字卡與全程字幕 (`typo_score`: 25/25)**: Apple Glassmorphism HUD + `00:00` to end 100% single-clause burned-in subtitles + viral high-contrast outlined typography thumbnail (`thumbnail_16x9.jpg`).
+5. **Mandatory User Review Before YouTube Upload (`auto_upload=False` / `PENDING_USER_REVIEW`)**:
+   - Stage all passing videos into `G:\我的雲端硬碟\YT-Auto-Empire-Videos\04_最新重製精緻3D動畫版_全集檢閱` and `pending_user_review_for_youtube.json` so the user can review them first and decide whether to upload to YouTube.
