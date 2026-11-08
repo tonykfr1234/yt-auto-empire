@@ -31,17 +31,19 @@ def launch_login_browser():
     with sync_playwright() as p:
         context = p.chromium.launch_persistent_context(
             user_data_dir=profile_dir,
+            channel="chrome",
             headless=False,
             no_viewport=True,
             args=[
                 "--start-maximized",
+                "--remote-debugging-port=9222",
                 "--disable-blink-features=AutomationControlled"
             ]
         )
 
-        # 分頁 1: Google Flow
+        # 分頁 1: Google Flow (flow.google.com)
         flow_page = context.pages[0] if context.pages else context.new_page()
-        flow_page.goto("https://labs.google/fx/tools/flow", wait_until="domcontentloaded")
+        flow_page.goto("https://flow.google.com/", wait_until="domcontentloaded")
 
         # 分頁 2: YouTube Studio (用於網頁版自動上片與頻道管理)
         yt_page = context.new_page()

@@ -12,6 +12,7 @@ video_generator.py — 雙引擎影片生成模組 (Gemini Omni 1.2 Flash API + 
 import os
 import re
 import subprocess
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Any, List, Optional
 from google import genai
@@ -41,6 +42,8 @@ class DualVideoGenerator:
             else None
         )
         self.quota_maximizer = quota_maximizer or UltraQuotaMaximizer()
+        self._flow_lock = threading.Lock()
+        self._flow_auth_ready = True
 
     def generate_clip_via_local_kinetic_studio(
         self,
@@ -142,92 +145,132 @@ class DualVideoGenerator:
         duration_sec: int = 10
     ) -> str:
         """
-        使用 Playwright 啟動持久化 Chrome 設定檔，直接開啟 Google Flow (`https://labs.google/fx/tools/flow`)
-        自動填入分鏡 Prompt、觸發生成並攔截/下載產出的 MP4 影片。
-        若尚未登入 Google 帳號，會自動切換至 Gemini Omni 1.2 Flash API 或本地動態運鏡引擎保底完成生成。
+        使用 Playwright 啟動持久化 Chrome 設定檔 (`chrome_profile`)，直接開啟 Google Flow (`https://flow.google.com/`)
+        自動點擊「使用 Google Flow 建立」進入工作區、填入含人物與字幕連動的分鏡 Prompt、觸發生成並下載產出的 MP4 影片。
+        若偵測到 `chrome_profile` 尚未完成首次 Google 帳號登入，會自動切換至備援渲染引擎保底完成生成。
         """
-        prompt = scene["visual_prompt"]
-        print(f"[VideoGenerator/GoogleFlow] 正在啟動瀏覽器操控 Google Flow 網頁引擎: {prompt[:45]}...")
+        if not self._flow_auth_ready:
+            return self.generate_clip_via_omni_api(
+                scene=scene,
+                output_path=output_path,
+                aspect_ratio=aspect_ratio,
+                duration_sec=duration_sec
+            )
+
+        raw_prompt = scene.get("visual_prompt", "")
+        narration = scene.get("narration", "")
+        prompt = (
+            f"Cinematic {aspect_ratio} video featuring an expressive human tech creator presenter in frame, "
+            f"visually illustrating the exact subtitle narration: '{narration[:90]}'. "
+            f"Scene details: {raw_prompt}. High-retention dynamic camera motion, zero static loop."
+        )
+        print(f"[VideoGenerator/GoogleFlow] 正在啟動瀏覽器操控 Google Flow (flow.google.com) 網頁引擎: {prompt[:55]}...")
         try:
-            import shutil
             from playwright.sync_api import sync_playwright
 
-            local_app_data = os.environ.get("LOCALAPPDATA", "C:/Users/tonyk/AppData/Local")
-            src_user_data = os.path.join(local_app_data, "Google", "Chrome", "User Data")
-            flow_profile_dir = os.path.abspath("chrome_flow_tonykfr1234")
+            flow_profile_dir = os.path.abspath(self.chrome_user_data_dir or "chrome_profile")
             os.makedirs(flow_profile_dir, exist_ok=True)
-
-            # 自動同步 tonykfr1234@gmail.com 的 Chrome Default 憑證設定檔
-            local_state_src = os.path.join(src_user_data, "Local State")
-            local_state_dst = os.path.join(flow_profile_dir, "Local State")
-            if os.path.exists(local_state_src) and not os.path.exists(local_state_dst):
-                shutil.copy2(local_state_src, local_state_dst)
-
-            default_src = os.path.join(src_user_data, "Default")
-            default_dst = os.path.join(flow_profile_dir, "Default")
-            if os.path.exists(default_src) and not os.path.exists(default_dst):
-                shutil.copytree(
-                    default_src,
-                    default_dst,
-                    ignore=shutil.ignore_patterns("Cache*", "Code Cache*", "GPUCache*", "Service Worker*", "*.lock", "LOCK"),
-                    dirs_exist_ok=True
-                )
-
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-            with sync_playwright() as p:
-                context = p.chromium.launch_persistent_context(
-                    user_data_dir=flow_profile_dir,
-                    channel="chrome",
-                    headless=True,
-                    accept_downloads=True,
-                    args=[
-                        "--profile-directory=Default",
-                        "--disable-blink-features=AutomationControlled"
-                    ]
-                )
-                page = context.pages[0] if context.pages else context.new_page()
-                page.goto("https://labs.google/fx/tools/flow", timeout=25000)
-                page.wait_for_load_state("domcontentloaded", timeout=15000)
+            with self._flow_lock:
+                if not self._flow_auth_ready:
+                    raise RuntimeError("Google Flow 持久化設定檔 (`chrome_profile`) 待首次互動登入授權。")
+                with sync_playwright() as p:
+                    browser_cdp = None
+                    try:
+                        browser_cdp = p.chromium.connect_over_cdp("http://127.0.0.1:9222", timeout=2500)
+                        context = browser_cdp.contexts[0] if browser_cdp.contexts else browser_cdp.new_context(accept_downloads=True)
+                        page = context.new_page()
+                    except Exception:
+                        context = p.chromium.launch_persistent_context(
+                            user_data_dir=flow_profile_dir,
+                            channel="chrome",
+                            headless=True,
+                            accept_downloads=True,
+                            args=[
+                                "--disable-blink-features=AutomationControlled"
+                            ]
+                        )
+                        page = context.pages[0] if context.pages else context.new_page()
 
-                # 自動偵測並同步 Google Flow 網頁上的 Google One Ultra 真實剩餘點數
-                try:
-                    body_text = page.locator("body").inner_text(timeout=3000)
-                    credit_match = re.search(r"([\d,]+)\s*(?:credits|點|點數)", body_text, re.IGNORECASE)
-                    if credit_match:
-                        live_credits = int(credit_match.group(1).replace(",", ""))
-                        self.quota_maximizer.sync_live_balance_from_flow_ui(live_credits)
-                except Exception:
-                    pass
+                    page.goto("https://flow.google.com/", timeout=25000)
+                    page.wait_for_load_state("domcontentloaded", timeout=15000)
+                    page.wait_for_timeout(2000)
 
-                # 尋找 Google Flow 的提示詞輸入框
-                prompt_box = page.locator(
-                    "textarea, [contenteditable='true'], input[type='text']"
-                ).first
-                if prompt_box.count() == 0:
-                    context.close()
-                    raise RuntimeError("Google Flow 尚未完成首次 Google 帳號登入授權。")
+                    # 若停留在介紹頁 (flow.google.com/about)，自動點擊「使用 Google Flow 建立」進入工作區
+                    if "/about" in page.url:
+                        for b in page.locator("button, a").all():
+                            txt = (b.inner_text() or "").strip()
+                            if any(k in txt for k in ["使用 Google Flow 建立", "試用 Google Flow", "Create with Google Flow", "Create with Flow"]):
+                                b.click()
+                                page.wait_for_timeout(3500)
+                                break
 
-                prompt_box.click()
-                prompt_box.fill(prompt)
-                page.keyboard.press("Enter")
+                    # 若被導向 accounts.google.com 登入頁，代表持久化設定檔尚未完成首次互動登入
+                    if "accounts.google.com" in page.url:
+                        self._flow_auth_ready = False
+                        if browser_cdp:
+                            page.close()
+                        else:
+                            context.close()
+                        raise RuntimeError("Google Flow 持久化設定檔 (`chrome_profile`) 尚未完成首次 Google 帳號登入授權。")
 
-                with page.expect_download(timeout=180000) as download_info:
-                    download_btn = page.locator(
-                        "button:has-text('Download'), a[download], [aria-label*='Download']"
+                    # 若已經進入專案列表頁，點擊「新增專案 / New Project」按鈕
+                    for b in page.locator("button, a").all():
+                        txt = (b.inner_text() or "").strip()
+                        if any(k in txt for k in ["New project", "新增專案", "建立專案", "New Project", "+"]):
+                            try:
+                                b.click(timeout=2000)
+                                page.wait_for_timeout(2000)
+                                break
+                            except Exception:
+                                pass
+
+                    # 自動偵測並同步 Google Flow 網頁上的 Google One Ultra 真實剩餘點數
+                    try:
+                        body_text = page.locator("body").inner_text(timeout=3000)
+                        credit_match = re.search(r"([\d,]+)\s*(?:credits|點|點數)", body_text, re.IGNORECASE)
+                        if credit_match:
+                            live_credits = int(credit_match.group(1).replace(",", ""))
+                            self.quota_maximizer.sync_live_balance_from_flow_ui(live_credits)
+                    except Exception:
+                        pass
+
+                    # 尋找 Google Flow 的提示詞輸入框
+                    prompt_box = page.locator(
+                        "textarea, [contenteditable='true'], input[type='text']"
                     ).first
-                    download_btn.wait_for(state="visible", timeout=150000)
-                    download_btn.click()
+                    if prompt_box.count() == 0:
+                        self._flow_auth_ready = False
+                        if browser_cdp:
+                            page.close()
+                        else:
+                            context.close()
+                        raise RuntimeError("Google Flow 工作區尚未就緒或需完成首次帳號登入授權。")
 
-                download = download_info.value
-                download.save_as(output_path)
-                context.close()
-                self.quota_maximizer.record_flow_consumption(clips_count=1)
-                print(
-                    f"[VideoGenerator/GoogleFlow] 網頁生成並下載成功: {output_path} "
-                    f"(當月剩餘 Ultra 點數: {self.quota_maximizer.state['remaining_credits']:,})"
-                )
-                return output_path
+                    prompt_box.click()
+                    prompt_box.fill(prompt)
+                    page.keyboard.press("Enter")
+
+                    with page.expect_download(timeout=180000) as download_info:
+                        download_btn = page.locator(
+                            "button:has-text('Download'), button:has-text('下載'), a[download], [aria-label*='Download'], [aria-label*='下載']"
+                        ).first
+                        download_btn.wait_for(state="visible", timeout=150000)
+                        download_btn.click()
+
+                    download = download_info.value
+                    download.save_as(output_path)
+                    if browser_cdp:
+                        page.close()
+                    else:
+                        context.close()
+                    self.quota_maximizer.record_flow_consumption(clips_count=1)
+                    print(
+                        f"[VideoGenerator/GoogleFlow] 網頁生成並下載成功: {output_path} "
+                        f"(當月剩餘 Ultra 點數: {self.quota_maximizer.state['remaining_credits']:,})"
+                    )
+                    return output_path
 
         except Exception as e:
             print(
