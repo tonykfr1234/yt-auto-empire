@@ -137,31 +137,25 @@ def run_empire_pipeline(
     )
 
     # -------------------------------------------------------------------------
-    # Step 5: FFmpeg 自動剪輯、混音、動態字幕與章節時間軸生成
+    # Step 5: 百萬博主標準「3D 卡通女主播動態說話動畫 + 逐句字幕 1:1 視覺同步引擎」自動剪輯與混音
     # -------------------------------------------------------------------------
     editor = AutoVideoEditor(work_dir=run_dir)
-
     final_long_mp4 = os.path.join(run_dir, "final_long_16x9.mp4")
     final_long_srt = os.path.join(run_dir, "final_long_16x9.srt")
-    _, _, long_chapters = editor.assemble_timeline(
-        scenes=long_scenes_list,
-        raw_clips=long_clips,
-        voice_wavs=long_wavs,
-        output_video_path=final_long_mp4,
-        srt_output_path=final_long_srt,
-        aspect_ratio="16:9"
-    )
-
     final_shorts_mp4 = os.path.join(run_dir, "final_shorts_9x16.mp4")
     final_shorts_srt = os.path.join(run_dir, "final_shorts_9x16.srt")
-    editor.assemble_timeline(
-        scenes=shorts_scenes_list,
-        raw_clips=shorts_clips,
-        voice_wavs=shorts_wavs,
-        output_video_path=final_shorts_mp4,
-        srt_output_path=final_shorts_srt,
-        aspect_ratio="9:16"
-    )
+
+    # 計算章節時間軸
+    long_chapters = []
+    cur_t = 0.0
+    for sc in long_scenes_list:
+        mins = int(cur_t // 60)
+        secs = int(cur_t % 60)
+        long_chapters.append(f"{mins:02d}:{secs:02d} {sc.get('chapter_title', f'核心實測 {sc.get(\"scene_id\", 1):02d}')}")
+        cur_t += float(sc.get("duration_sec", 12.0))
+
+    from million_youtuber_remaster_engine import remaster_single_campaign
+    remaster_single_campaign(run_dir)
 
     # -------------------------------------------------------------------------
     # Step 6: 發布前嚴格自我審閱與自動優化守門員 (Pre-Upload Self-QA Gatekeeper)
