@@ -20,6 +20,7 @@ temp/
 *.wav
 *.mp3
 *.jpg
+!assets/studio_art/*.jpg
 *.png
 *.ass
 *.srt
