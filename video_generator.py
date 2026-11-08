@@ -137,6 +137,72 @@ class DualVideoGenerator:
                 duration_sec=duration_sec
             )
 
+    def _load_or_save_flow_project_url(self, new_url: Optional[str] = None) -> Optional[str]:
+        """讀取或保存 Google Flow 專屬固定專案網址 (`flow_project_state.json`)，確保所有 YouTube 影片都在同一個專屬專案內生成。"""
+        import json
+        state_file = os.path.abspath("flow_project_state.json")
+        project_name = os.getenv("FLOW_PROJECT_NAME", "YT-Auto-Empire YouTube 爆款影片總部")
+        if new_url and ("/project/" in new_url or "flow.google.com" in new_url) and "/about" not in new_url:
+            payload = {
+                "project_name": project_name,
+                "project_url": new_url,
+                "model": "Veo 3.1 - Quality (Highest Quality 1080p)",
+                "resolution": "1080p"
+            }
+            try:
+                with open(state_file, "w", encoding="utf-8") as f:
+                    json.dump(payload, f, indent=2, ensure_ascii=False)
+            except Exception:
+                pass
+            return new_url
+
+        if os.path.exists(state_file):
+            try:
+                with open(state_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                return data.get("project_url")
+            except Exception:
+                return None
+        return None
+
+    def _connect_flow_browser(self, p, flow_profile_dir: str):
+        """
+        優先順序：
+        1. 檢查使用者主 Chrome (`User Data/DevToolsActivePort`) 是否已開啟 `chrome://inspect/#remote-debugging`
+        2. 檢查本地 CDP 9222 埠 (`http://127.0.0.1:9222`)
+        3. 啟動持久化 `chrome_profile`
+        """
+        local_app_data = os.environ.get("LOCALAPPDATA", "C:/Users/tonyk/AppData/Local")
+        active_port_file = os.path.join(local_app_data, "Google", "Chrome", "User Data", "DevToolsActivePort")
+        if os.path.exists(active_port_file):
+            try:
+                with open(active_port_file, "r", encoding="utf-8") as f:
+                    lines = [ln.strip() for ln in f.read().splitlines() if ln.strip()]
+                if lines:
+                    port = int(lines[0])
+                    ws_path = lines[1] if len(lines) > 1 else ""
+                    endpoint = f"ws://127.0.0.1:{port}{ws_path}" if ws_path else f"http://127.0.0.1:{port}"
+                    browser = p.chromium.connect_over_cdp(endpoint, timeout=4000)
+                    ctx = browser.contexts[0] if browser.contexts else browser.new_context(accept_downloads=True)
+                    return browser, ctx, ctx.new_page()
+            except Exception:
+                pass
+
+        try:
+            browser = p.chromium.connect_over_cdp("http://127.0.0.1:9222", timeout=2500)
+            ctx = browser.contexts[0] if browser.contexts else browser.new_context(accept_downloads=True)
+            return browser, ctx, ctx.new_page()
+        except Exception:
+            ctx = p.chromium.launch_persistent_context(
+                user_data_dir=flow_profile_dir,
+                channel="chrome",
+                headless=True,
+                accept_downloads=True,
+                args=["--disable-blink-features=AutomationControlled"]
+            )
+            pg = ctx.pages[0] if ctx.pages else ctx.new_page()
+            return None, ctx, pg
+
     def generate_clip_via_google_flow_web(
         self,
         scene: Dict[str, Any],
@@ -145,9 +211,9 @@ class DualVideoGenerator:
         duration_sec: int = 10
     ) -> str:
         """
-        使用 Playwright 啟動持久化 Chrome 設定檔 (`chrome_profile`)，直接開啟 Google Flow (`https://flow.google.com/`)
-        自動點擊「使用 Google Flow 建立」進入工作區、填入含人物與字幕連動的分鏡 Prompt、觸發生成並下載產出的 MP4 影片。
-        若偵測到 `chrome_profile` 尚未完成首次 Google 帳號登入，會自動切換至備援渲染引擎保底完成生成。
+        在 Google Flow (`https://flow.google.com/`) 固定專屬專案 (`YT-Auto-Empire YouTube 爆款影片總部`) 中自動建立並生成每支影片：
+        - 自動選擇最高畫質 (`1080p Upscaled / Highest Quality`) 與最好模型 (`Veo 3.1 - Quality` / `Veo 3 - Quality`)
+        - 每個分鏡皆帶入「擬真人物主播 + 逐句字幕連動情境」Prompt，絕不重複畫面
         """
         if not self._flow_auth_ready:
             return self.generate_clip_via_omni_api(
@@ -159,12 +225,17 @@ class DualVideoGenerator:
 
         raw_prompt = scene.get("visual_prompt", "")
         narration = scene.get("narration", "")
+        project_title = os.getenv("FLOW_PROJECT_NAME", "YT-Auto-Empire YouTube 爆款影片總部")
         prompt = (
+            f"[1080p Highest Quality | Veo 3.1 Quality Model | {aspect_ratio}] "
             f"Cinematic {aspect_ratio} video featuring an expressive human tech creator presenter in frame, "
-            f"visually illustrating the exact subtitle narration: '{narration[:90]}'. "
-            f"Scene details: {raw_prompt}. High-retention dynamic camera motion, zero static loop."
+            f"visually illustrating the exact subtitle narration: '{narration[:100]}'. "
+            f"Scene details: {raw_prompt}. Ultra-detailed lighting, smooth 60fps camera motion, zero static loop."
         )
-        print(f"[VideoGenerator/GoogleFlow] 正在啟動瀏覽器操控 Google Flow (flow.google.com) 網頁引擎: {prompt[:55]}...")
+        print(
+            f"[VideoGenerator/GoogleFlow] 正在進入專屬專案【{project_title}】以最高畫質 (1080p) + 最佳模型 (Veo Quality) 生成: "
+            f"{prompt[:60]}..."
+        )
         try:
             from playwright.sync_api import sync_playwright
 
@@ -174,26 +245,13 @@ class DualVideoGenerator:
 
             with self._flow_lock:
                 if not self._flow_auth_ready:
-                    raise RuntimeError("Google Flow 持久化設定檔 (`chrome_profile`) 待首次互動登入授權。")
+                    raise RuntimeError("Google Flow 尚未完成首次登入或未開啟 chrome://inspect/#remote-debugging。")
                 with sync_playwright() as p:
-                    browser_cdp = None
-                    try:
-                        browser_cdp = p.chromium.connect_over_cdp("http://127.0.0.1:9222", timeout=2500)
-                        context = browser_cdp.contexts[0] if browser_cdp.contexts else browser_cdp.new_context(accept_downloads=True)
-                        page = context.new_page()
-                    except Exception:
-                        context = p.chromium.launch_persistent_context(
-                            user_data_dir=flow_profile_dir,
-                            channel="chrome",
-                            headless=True,
-                            accept_downloads=True,
-                            args=[
-                                "--disable-blink-features=AutomationControlled"
-                            ]
-                        )
-                        page = context.pages[0] if context.pages else context.new_page()
+                    browser_cdp, context, page = self._connect_flow_browser(p, flow_profile_dir)
 
-                    page.goto("https://flow.google.com/", timeout=25000)
+                    saved_project_url = self._load_or_save_flow_project_url()
+                    target_url = saved_project_url or "https://flow.google.com/"
+                    page.goto(target_url, timeout=25000)
                     page.wait_for_load_state("domcontentloaded", timeout=15000)
                     page.wait_for_timeout(2000)
 
@@ -206,25 +264,45 @@ class DualVideoGenerator:
                                 page.wait_for_timeout(3500)
                                 break
 
-                    # 若被導向 accounts.google.com 登入頁，代表持久化設定檔尚未完成首次互動登入
+                    # 若被導向 accounts.google.com 登入頁，代表尚未授權登入
                     if "accounts.google.com" in page.url:
                         self._flow_auth_ready = False
                         if browser_cdp:
                             page.close()
                         else:
                             context.close()
-                        raise RuntimeError("Google Flow 持久化設定檔 (`chrome_profile`) 尚未完成首次 Google 帳號登入授權。")
+                        raise RuntimeError(
+                            "Google Flow 尚未取得登入憑證（請於 Chrome 開啟 chrome://inspect/#remote-debugging 勾選 Enable remote debugging，或於登入視窗登入一次）。"
+                        )
 
-                    # 若已經進入專案列表頁，點擊「新增專案 / New Project」按鈕
-                    for b in page.locator("button, a").all():
-                        txt = (b.inner_text() or "").strip()
-                        if any(k in txt for k in ["New project", "新增專案", "建立專案", "New Project", "+"]):
+                    # 若尚未進入固定專案，自動建立/開啟「YT-Auto-Empire YouTube 爆款影片總部」專案並鎖定該專案網址
+                    if not saved_project_url or "/project/" not in page.url:
+                        existing_proj = page.locator(f"text={project_title}").first
+                        if existing_proj.count() > 0:
+                            existing_proj.click()
+                            page.wait_for_timeout(2500)
+                        else:
+                            for b in page.locator("button, a").all():
+                                txt = (b.inner_text() or "").strip()
+                                if any(k in txt for k in ["New project", "新增專案", "建立專案", "New Project", "+"]):
+                                    try:
+                                        b.click(timeout=2500)
+                                        page.wait_for_timeout(2500)
+                                        break
+                                    except Exception:
+                                        pass
+                            # 嘗試將新專案命名為 YT-Auto-Empire YouTube 爆款影片總部
                             try:
-                                b.click(timeout=2000)
-                                page.wait_for_timeout(2000)
-                                break
+                                title_input = page.locator("input[placeholder*='Untitled'], input[placeholder*='未命名'], [aria-label*='Project name'], [aria-label*='專案名稱']").first
+                                if title_input.count() > 0:
+                                    title_input.click()
+                                    title_input.fill(project_title)
+                                    page.keyboard.press("Enter")
                             except Exception:
                                 pass
+
+                        if "flow.google.com" in page.url or "labs.google" in page.url:
+                            self._load_or_save_flow_project_url(page.url)
 
                     # 自動偵測並同步 Google Flow 網頁上的 Google One Ultra 真實剩餘點數
                     try:
@@ -233,6 +311,24 @@ class DualVideoGenerator:
                         if credit_match:
                             live_credits = int(credit_match.group(1).replace(",", ""))
                             self.quota_maximizer.sync_live_balance_from_flow_ui(live_credits)
+                    except Exception:
+                        pass
+
+                    # 自動切換為「最好模型 (Veo 3.1 - Quality / Highest Quality)」與對應長寬比 (16:9 / 9:16)
+                    try:
+                        for btn in page.locator("button, [role='button'], [role='combobox']").all():
+                            btxt = (btn.inner_text() or "").strip()
+                            if any(k in btxt for k in ["Fast", "Veo", "Model", "模型", "品質", "Quality", "Settings", "設定"]):
+                                btn.click(timeout=1500)
+                                page.wait_for_timeout(600)
+                                q_opt = page.locator("text=/Veo.*Quality|Highest Quality|最高品質|最高畫質/i").first
+                                if q_opt.count() > 0:
+                                    q_opt.click(timeout=1500)
+                                break
+                        ratio_label = "16:9" if aspect_ratio == "16:9" else "9:16"
+                        ratio_opt = page.locator(f"button:has-text('{ratio_label}'), [role='option']:has-text('{ratio_label}')").first
+                        if ratio_opt.count() > 0:
+                            ratio_opt.click(timeout=1500)
                     except Exception:
                         pass
 
@@ -246,7 +342,7 @@ class DualVideoGenerator:
                             page.close()
                         else:
                             context.close()
-                        raise RuntimeError("Google Flow 工作區尚未就緒或需完成首次帳號登入授權。")
+                        raise RuntimeError("Google Flow 專案工作區輸入框尚未就緒。")
 
                     prompt_box.click()
                     prompt_box.fill(prompt)
@@ -258,6 +354,14 @@ class DualVideoGenerator:
                         ).first
                         download_btn.wait_for(state="visible", timeout=150000)
                         download_btn.click()
+                        page.wait_for_timeout(800)
+                        # 若彈出畫質選單，優先選擇「1080p Upscaled / 最高畫質 1080p」
+                        upscale_opt = page.locator("text=/1080p|Upscaled|最高畫質|Original/i").first
+                        if upscale_opt.count() > 0:
+                            try:
+                                upscale_opt.click(timeout=2000)
+                            except Exception:
+                                pass
 
                     download = download_info.value
                     download.save_as(output_path)
@@ -267,7 +371,7 @@ class DualVideoGenerator:
                         context.close()
                     self.quota_maximizer.record_flow_consumption(clips_count=1)
                     print(
-                        f"[VideoGenerator/GoogleFlow] 網頁生成並下載成功: {output_path} "
+                        f"[VideoGenerator/GoogleFlow] 專屬專案【{project_title}】1080p 最高畫質生成並下載成功: {output_path} "
                         f"(當月剩餘 Ultra 點數: {self.quota_maximizer.state['remaining_credits']:,})"
                     )
                     return output_path

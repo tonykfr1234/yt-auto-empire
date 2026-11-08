@@ -158,7 +158,7 @@ def run_24_7_hybrid_daemon(interval_minutes: int = 60, auto_upload: bool = True)
 
             summary = run_empire_pipeline(
                 custom_topic=fresh_topic,
-                engine_mode="ultra",
+                engine_mode="flow",
                 long_scenes=matched_long_scenes,
                 shorts_scenes=4,
                 auto_upload=auto_upload
