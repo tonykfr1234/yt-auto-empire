@@ -210,12 +210,13 @@ class AutoVideoEditor:
         v_engine.generate_cyber_bgm_and_sfx(duration_sec=current_time, output_wav=bgm_wav)
 
         # 燒錄高對比單行居中字幕 (9:16 垂直畫面設為 FontSize=7 = 46px，單行可完整容納 21 個中文字，同一句話完整顯示於單一畫面且絕不破框！)
-        escaped_srt = srt_output_path.replace("\\", "/").replace(":", "\\:")
+        srt_dir = os.path.dirname(os.path.abspath(srt_output_path))
+        srt_filename = os.path.basename(srt_output_path)
         font_size = 12 if aspect_ratio == "16:9" else 7
         margin_v = 34 if aspect_ratio == "16:9" else 70
         margin_h = 30 if aspect_ratio == "16:9" else 24
         sub_filter = (
-            f"subtitles='{escaped_srt}':force_style="
+            f"subtitles='{srt_filename}':force_style="
             f"'FontName=Microsoft JhengHei,Bold=1,FontSize={font_size},PrimaryColour=&H0000FFFF,"
             f"OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=1,Alignment=2,"
             f"MarginL={margin_h},MarginR={margin_h},MarginV={margin_v},WrapStyle=2'"
@@ -223,10 +224,10 @@ class AutoVideoEditor:
 
         burn_cmd = [
             "ffmpeg", "-y",
-            "-i", concat_raw_path,
-            "-i", bgm_wav,
+            "-i", os.path.abspath(concat_raw_path),
+            "-i", os.path.abspath(bgm_wav),
             "-filter_complex",
-            f"[0:v]{sub_filter}[v];[0:a]volume=1.0[va];[1:a]volume=0.22[bg];[va][bg]amix=inputs=2:duration=first[a]",
+            f"[0:v]{sub_filter}[v];[0:a]volume=1.05[va];[1:a]volume=0.28[bg];[va][bg]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[a]",
             "-map", "[v]",
             "-map", "[a]",
             "-c:v", "h264_nvenc",
@@ -234,25 +235,14 @@ class AutoVideoEditor:
             "-cq", "20",
             "-c:a", "aac",
             "-b:a", "192k",
-            output_video_path
+            os.path.abspath(output_video_path)
         ]
-        burn_proc = subprocess.run(burn_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        burn_proc = subprocess.run(burn_cmd, cwd=srt_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if burn_proc.returncode != 0:
-            # 備援：若字幕路徑字元未觸發則保留 BGM 混音與原始畫面
-            fallback_cmd = [
-                "ffmpeg", "-y",
-                "-i", concat_raw_path,
-                "-i", bgm_wav,
-                "-filter_complex",
-                "[0:a]volume=1.0[va];[1:a]volume=0.22[bg];[va][bg]amix=inputs=2:duration=first[a]",
-                "-map", "0:v",
-                "-map", "[a]",
-                "-c:v", "copy",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                output_video_path
-            ]
-            subprocess.run(fallback_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            burn_cmd[burn_cmd.index("h264_nvenc")] = "libx264"
+            burn_cmd[burn_cmd.index("-preset") + 1] = "fast"
+            burn_cmd[burn_cmd.index("-cq")] = "-crf"
+            subprocess.run(burn_cmd, cwd=srt_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
         print(f"[AutoEditor] 影片剪輯完成 ({aspect_ratio}, 總長 {current_time:.1f}s): {output_video_path}")
         return output_video_path, srt_output_path, yt_chapters

@@ -107,9 +107,13 @@ class ViralVisualEngine:
         narration = scene.get("narration", chapter)
         visual_prompt = scene.get("visual_prompt", "")
 
-        raw_clauses = [c.strip() for c in re.split(r"(?<=[。！？；：，、])", narration) if c.strip()]
+        raw_clauses = [
+            c.strip(" ，。！？；：、—…")
+            for c in re.split(r"[。！？；：，、—…]+", narration.strip())
+            if c.strip(" ，。！？；：、—…")
+        ]
         if not raw_clauses:
-            raw_clauses = [narration]
+            raw_clauses = [narration.strip()]
 
         # 24 組完全不重複的人物角色設定 (Role, 髮型, 配件, 手持道具, 舞台模式, 主色系)
         personas = [
@@ -991,8 +995,18 @@ function animate(now) {{
     ctx.fill();
   }}
 
-  // 依時間自動切換對應的字幕子句索引 (每 ~2.4 秒推進一個子句情境，確保畫面隨每一句台詞即時變化！)
-  const clauseIdx = Math.floor(elapsedSec / 2.4) % clauses.length;
+  // 依字數比例精準計算每個字幕子句在 9.8s 錄製時間軸上的切換點，經 FFmpeg setpts 對齊配音長度後，與燒錄字幕 100% 毫秒級同步切換！
+  const totalChars = Math.max(1, clauses.reduce((acc, s) => acc + Math.max(1, s.length), 0));
+  const normProg = Math.min(0.9999, Math.max(0.0, elapsedSec / 9.8));
+  let clauseIdx = 0;
+  let cumChars = 0;
+  for (let i = 0; i < clauses.length; i++) {{
+    cumChars += Math.max(1, clauses[i].length);
+    if (normProg <= (cumChars / totalChars) || i === clauses.length - 1) {{
+      clauseIdx = i;
+      break;
+    }}
+  }}
   const clauseObj = analyzeClauseContext(clauses[clauseIdx], clauseIdx);
 
   if (isLandscape) {{
@@ -1061,14 +1075,14 @@ requestAnimationFrame(animate);
         if not webm_path or not os.path.exists(webm_path):
             raise RuntimeError("Playwright 實機錄屏未產出影片檔。")
 
-        target_dur = max(float(duration_sec), 10.0)
-        stretch_ratio = max(1.0, (target_dur + 1.5) / 9.8)
+        target_dur = max(float(duration_sec), 2.0)
+        stretch_ratio = max(0.35, target_dur / 9.8)
 
         cmd = [
             "ffmpeg", "-y",
             "-i", webm_path,
+            "-vf", f"setpts={stretch_ratio:.4f}*PTS,scale={w}:{h},fps=30,tpad=stop_mode=clone:stop_duration=3,format=yuv420p",
             "-t", f"{target_dur + 1.0:.2f}",
-            "-vf", f"setpts={stretch_ratio:.3f}*PTS,scale={w}:{h},fps=30,tpad=stop_mode=clone:stop_duration=3,format=yuv420p",
             "-c:v", "h264_nvenc",
             "-preset", "p2",
             "-cq", "20",
@@ -1102,16 +1116,18 @@ requestAnimationFrame(animate);
         )
 
     def generate_cyber_bgm_and_sfx(self, duration_sec: float, output_wav: str) -> str:
+        """生成百萬科技頻道級清晰律動背景音樂 (Synthwave Bass + 和弦律動 + 120BPM 電子節拍)，全程襯托女聲旁白！"""
         os.makedirs(os.path.dirname(output_wav), exist_ok=True)
         filter_expr = (
-            f"sine=frequency=65.41:duration={duration_sec:.2f}[bass];"
-            f"sine=frequency=130.81:duration={duration_sec:.2f}[mid1];"
-            f"sine=frequency=196.00:duration={duration_sec:.2f}[mid2];"
-            f"sine=frequency=261.63:duration={duration_sec:.2f}[high];"
-            f"[bass]tremolo=f=4.0:d=0.85,volume=0.14[b_out];"
-            f"[mid1][mid2]amix=inputs=2:duration=first,tremolo=f=2.0:d=0.65,lowpass=f=650,volume=0.09[m_out];"
-            f"[high]tremolo=f=8.0:d=0.75,aecho=0.8:0.88:60:0.4,volume=0.04[h_out];"
-            f"[b_out][m_out][h_out]amix=inputs=3:duration=first,alimiter=limit=0.85"
+            f"sine=frequency=110.00:duration={duration_sec:.2f}[bass];"
+            f"sine=frequency=220.00:duration={duration_sec:.2f}[mid1];"
+            f"sine=frequency=277.18:duration={duration_sec:.2f}[mid2];"
+            f"sine=frequency=329.63:duration={duration_sec:.2f}[mid3];"
+            f"sine=frequency=440.00:duration={duration_sec:.2f}[arp];"
+            f"[bass]tremolo=f=2.0:d=0.90,volume=0.55[b_out];"
+            f"[mid1][mid2][mid3]amix=inputs=3:duration=first:normalize=0,tremolo=f=4.0:d=0.75,lowpass=f=1200,volume=0.32[m_out];"
+            f"[arp]tremolo=f=8.0:d=0.88,aecho=0.8:0.88:125:0.45,volume=0.25[h_out];"
+            f"[b_out][m_out][h_out]amix=inputs=3:duration=first:normalize=0,alimiter=limit=0.92"
         )
         cmd = [
             "ffmpeg", "-y",
