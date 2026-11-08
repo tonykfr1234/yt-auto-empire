@@ -1,0 +1,89 @@
+{
+  "cycle_key": "2026-11",
+  "monthly_total_credits": 15000,
+  "used_credits": 0,
+  "remaining_credits": 15000,
+  "videos_produced_this_month": 13,
+  "shorts_produced_this_month": 13,
+  "clips_generated_via_flow": 0,
+  "history": [
+    {
+      "timestamp": "2026-11-08T02:47:06.211339",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T06:39:17.406177",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T07:20:02.090177",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T08:10:56.268606",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T09:07:51.954315",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T09:27:21.045402",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T10:08:22.263196",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T10:54:38.095937",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T11:46:43.640389",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T12:39:44.299322",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T12:53:31.404988",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T13:47:02.484516",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    },
+    {
+      "timestamp": "2026-11-08T14:41:23.926853",
+      "long_videos": 1,
+      "shorts_videos": 1,
+      "remaining_credits": 15000
+    }
+  ]
+}
