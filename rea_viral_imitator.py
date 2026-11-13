@@ -40,7 +40,7 @@ from million_youtuber_remaster_engine import (
 )
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-REA_REPO_DIR = r"C:\Users\tonyk\.gemini\antigravity\scratch\rea-video"
+REA_REPO_DIR = os.environ.get("REA_REPO_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rea-video"))
 REA_CASES_DIR = os.path.join(REA_REPO_DIR, "docs", "cases", "videos")
 VIRAL_REF_DIR = os.path.join(PROJECT_ROOT, "viral_references")
 BREAKDOWN_ROOT = os.path.join(PROJECT_ROOT, "runs", "rea_breakdowns")

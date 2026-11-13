@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-cd /d "C:\Users\tonyk\.gemini\antigravity\scratch\yt-auto-empire"
+cd /d "%~dp0"
 echo ============================================================================
 echo 🚀 啟動 Google Flow 專屬專案 【YT-Auto-Empire YouTube 爆款影片總部】 綁定視窗
 echo ============================================================================

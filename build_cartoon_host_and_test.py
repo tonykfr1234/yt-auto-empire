@@ -14,7 +14,7 @@ import subprocess
 from PIL import Image, ImageDraw, ImageFont
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-BRAIN_DIR = r"C:\Users\tonyk\.gemini\antigravity\brain\a07a4138-8a98-47d8-baa9-9fa6eb218cf0"
+BRAIN_DIR = os.environ.get("CARTOON_HOST_ASSET_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "host"))
 HOST_DIR = os.path.join(PROJECT_ROOT, "assets", "cartoon_host")
 FONT_BOLD = r"C:\Windows\Fonts\msjhbd.ttc"
 

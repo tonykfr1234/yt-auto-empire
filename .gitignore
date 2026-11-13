@@ -31,3 +31,12 @@ __pycache__/
 *$py.class
 .venv/
 venv/
+
+# 執行時自動產生的本機狀態檔（含個人紀錄，不進版控）
+daemon_status.json
+evolution_memory.json
+published_history.json
+upload_queue.json
+ultra_quota_ledger.json
+flow_project_state.json
+daemon_24_7.log

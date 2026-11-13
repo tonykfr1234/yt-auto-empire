@@ -5,7 +5,7 @@ description: Autonomous 24/7 YouTube & Shorts video production pipeline with Goo
 
 # YT-Auto-Empire: Google Flow 1080p + Pixar/UE5 3D Studio Character & Glassmorphism Motion Engine + 4-Dimension Viral Inspector & Google Drive Review Vault Skill
 
-Use this skill whenever building, maintaining, upgrading, or executing the autonomous YouTube 16:9 long-form and 9:16 Shorts generation pipeline (`YT-Auto-Empire` at `C:\Users\tonyk\.gemini\antigravity\scratch\yt-auto-empire`).
+Use this skill whenever building, maintaining, upgrading, or executing the autonomous YouTube 16:9 long-form and 9:16 Shorts generation pipeline (`YT-Auto-Empire` at 本專案資料夾).
 
 ---
 

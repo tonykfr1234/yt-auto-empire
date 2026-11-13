@@ -172,7 +172,7 @@ class DualVideoGenerator:
         2. 檢查本地 CDP 9222 埠 (`http://127.0.0.1:9222`)
         3. 啟動持久化 `chrome_profile`
         """
-        local_app_data = os.environ.get("LOCALAPPDATA", "C:/Users/tonyk/AppData/Local")
+        local_app_data = os.environ.get("LOCALAPPDATA", os.path.expanduser("~/AppData/Local"))
         active_port_file = os.path.join(local_app_data, "Google", "Chrome", "User Data", "DevToolsActivePort")
         if os.path.exists(active_port_file):
             try:

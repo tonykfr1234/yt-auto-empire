@@ -151,7 +151,8 @@ def run_empire_pipeline(
     for sc in long_scenes_list:
         mins = int(cur_t // 60)
         secs = int(cur_t % 60)
-        long_chapters.append(f"{mins:02d}:{secs:02d} {sc.get('chapter_title', f'核心實測 {sc.get(\"scene_id\", 1):02d}')}")
+        default_title = f"核心實測 {sc.get('scene_id', 1):02d}"
+        long_chapters.append(f"{mins:02d}:{secs:02d} {sc.get('chapter_title', default_title)}")
         cur_t += float(sc.get("duration_sec", 12.0))
 
     from million_youtuber_remaster_engine import remaster_single_campaign
@@ -202,7 +203,7 @@ def run_empire_pipeline(
     qa_passed = qa_and_algo_review.get("algorithm_readiness_score", 0) >= 90
 
     if auto_upload and qa_passed:
-        print(f"\n✅ [Self-QA 審閱滿分通過 ({qa_and_algo_review['algorithm_readiness_score']}/100)] 准許放行！正在自動上傳至 YouTube 頻道 (`tonykfr1234@gmail.com`)...")
+        print(f"\n✅ [Self-QA 審閱滿分通過 ({qa_and_algo_review['algorithm_readiness_score']}/100)] 准許放行！正在自動上傳至 YouTube 頻道 ({os.environ.get('YOUTUBE_CHANNEL_EMAIL', '你的頻道')})...")
         uploader.flush_upload_queue()
         long_vid_id = uploader.upload_video(
             video_path=final_long_mp4,

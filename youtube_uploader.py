@@ -32,7 +32,7 @@ class YouTubeEmpireUploader:
         self,
         client_secrets_file: str = "client_secrets.json",
         token_file: str = "token.json",
-        target_email: str = "tonykfr1234@gmail.com"
+        target_email: str = os.environ.get("YOUTUBE_CHANNEL_EMAIL", "")
     ):
         self.client_secrets_file = client_secrets_file
         self.token_file = token_file
@@ -118,18 +118,18 @@ class YouTubeEmpireUploader:
         """
         當未配置 `client_secrets.json` 時，自動嘗試：
         1. 連接本機 Chrome CDP (127.0.0.1:9222)
-        2. 若主 Chrome 未鎖定 (`lockfile` 不存在)，直接使用原設定檔 `%LOCALAPPDATA%/Google/Chrome/User Data` (`Default` = `tonykfr1234@gmail.com`)
-        3. 透過獨立自動化設定檔 `chrome_yt_tonykfr1234` 進入 YouTube Studio 完成上傳、填入標題、說明欄、縮圖並擷取真實 YouTube Video ID 公開發布！
+        2. 若主 Chrome 未鎖定 (`lockfile` 不存在)，直接使用原設定檔 `%LOCALAPPDATA%/Google/Chrome/User Data` (`Default` = 你的 YouTube 帳號)
+        3. 透過獨立自動化設定檔 `chrome_yt_automation` 進入 YouTube Studio 完成上傳、填入標題、說明欄、縮圖並擷取真實 YouTube Video ID 公開發布！
         """
         import shutil
         import time
         from playwright.sync_api import sync_playwright
         from concurrent.futures import ThreadPoolExecutor
 
-        local_app_data = os.environ.get("LOCALAPPDATA", "C:/Users/tonyk/AppData/Local")
+        local_app_data = os.environ.get("LOCALAPPDATA", os.path.expanduser("~/AppData/Local"))
         src_user_data = os.path.join(local_app_data, "Google", "Chrome", "User Data")
         lockfile_path = os.path.join(src_user_data, "lockfile")
-        automation_profile = os.path.abspath("chrome_yt_tonykfr1234")
+        automation_profile = os.path.abspath("chrome_yt_automation")
 
         # 決定使用哪個 User Data 目錄：若主 Chrome 未開啟鎖定，直接使用原生 User Data (完美支援 Chrome 130+ App-Bound Cookie 解密)
         use_native_profile = os.path.exists(src_user_data) and not os.path.exists(lockfile_path)
@@ -334,7 +334,7 @@ class YouTubeEmpireUploader:
         srt_path: Optional[str] = None,
         pinned_comment_text: Optional[str] = None
     ) -> str:
-        """上傳影片至 YouTube (`tonykfr1234@gmail.com`)，優先走官方 API，若無憑證檔則自動走 Chrome Studio 後台直傳。"""
+        """上傳影片至 YouTube（`.env` 的 YOUTUBE_CHANNEL_EMAIL），優先走官方 API，若無憑證檔則自動走 Chrome Studio 後台直傳。"""
         if not self.youtube:
             if os.path.exists(self.client_secrets_file) or os.path.exists(self.token_file):
                 self.authenticate()
