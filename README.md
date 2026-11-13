@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/Google-Flow%20%2F%20Gemini-4285F4" alt="Google Flow / Gemini">
   <img src="https://img.shields.io/badge/YouTube-Data%20API%20v3-FF0000" alt="YouTube Data API v3">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
 </p>
 <p align="center">
   <a href="#advantages">Advantages</a> · <a href="#quick-start">Quick start</a> · <a href="#workflow">Workflow</a> · <a href="#features">Features</a> · <a href="#demo">Demo</a> · <a href="#faq">FAQ</a> · <a href="#documentation">Documentation</a>
@@ -138,7 +139,7 @@ yt-auto-empire/
 
 - Use only material you have rights to; the presenter is an original design and does not imitate real people.
 - Before automatic uploads, make sure titles, descriptions and affiliate links follow YouTube policy and local law.
-- License: not yet specified.
+- License: [MIT](LICENSE).
 
 ## Glossary
 
